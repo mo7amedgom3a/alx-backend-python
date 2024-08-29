@@ -16,6 +16,7 @@ from client import (
     GithubOrgClient
 )
 
+
 class TestGithubOrgClient(unittest.TestCase):
     """_summary_
 
