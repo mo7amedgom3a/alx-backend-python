@@ -22,8 +22,6 @@ import unittest
 from parameterized import parameterized
 from utils import access_nested_map, get_json, memoize
 from unittest.mock import patch, Mock
-import requests
-
 
 class TestAccessNestedMap(unittest.TestCase):
     """_summary_
@@ -127,3 +125,6 @@ class TestMemoize(unittest.TestCase):
             self.assertEqual(result1, 42)
             self.assertEqual(result2, 42)
             mock_method.assert_called_once()
+
+if __name__ == '__main__':
+    unittest.main(verbosity=2)
