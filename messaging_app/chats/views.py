@@ -1,6 +1,8 @@
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework import filters
+from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q, Max
 from django.utils import timezone
 from .models import Conversation, Message, User
@@ -19,6 +21,10 @@ class ConversationViewSet(viewsets.ModelViewSet):
     """
     serializer_class = ConversationSerializer
     permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['title', 'participants__username']
+    ordering_fields = ['updated_at', 'created_at']
+    ordering = ['-updated_at']
 
     def get_queryset(self):
         """
@@ -75,6 +81,10 @@ class MessageViewSet(viewsets.ModelViewSet):
     """
     serializer_class = MessageSerializer
     permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['message_body', 'sender__username']
+    ordering_fields = ['sent_at']
+    ordering = ['-sent_at']
 
     def get_queryset(self):
         """
