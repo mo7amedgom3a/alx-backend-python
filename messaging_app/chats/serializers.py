@@ -6,11 +6,31 @@ class UserSerializer(serializers.ModelSerializer):
     """
     Serializer for the User model.
     """
+    password = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
+    password_confirm = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
+
     class Meta:
         model = User
-        fields = ['user_id', 'username', 'email', 'first_name', 'last_name',
-                 'bio', 'profile_picture', 'phone_number', 'last_seen', 'is_online']
+        fields = ['user_id', 'username', 'email', 'password', 'password_confirm', 
+                 'first_name', 'last_name', 'bio', 'profile_picture', 
+                 'phone_number', 'last_seen', 'is_online']
         read_only_fields = ['user_id', 'last_seen', 'is_online']
+
+    def validate(self, data):
+        """
+        Validate that password and password_confirm match.
+        """
+        if data.get('password') != data.get('password_confirm'):
+            raise serializers.ValidationError("Passwords do not match.")
+        return data
+
+    def create(self, validated_data):
+        """
+        Create a new user with encrypted password.
+        """
+        validated_data.pop('password_confirm')
+        user = User.objects.create_user(**validated_data)
+        return user
 
 
 class MessageSerializer(serializers.ModelSerializer):
@@ -19,12 +39,21 @@ class MessageSerializer(serializers.ModelSerializer):
     """
     sender = UserSerializer(read_only=True)
     sender_id = serializers.UUIDField(write_only=True)
+    message_body = serializers.CharField(required=True)
 
     class Meta:
         model = Message
         fields = ['message_id', 'conversation', 'sender', 'sender_id',
                  'message_body', 'sent_at', 'is_read', 'read_at']
         read_only_fields = ['message_id', 'sent_at', 'is_read', 'read_at']
+
+    def validate_message_body(self, value):
+        """
+        Validate message body is not empty.
+        """
+        if not value.strip():
+            raise serializers.ValidationError("Message body cannot be empty.")
+        return value.strip()
 
 
 class ConversationSerializer(serializers.ModelSerializer):
@@ -38,6 +67,7 @@ class ConversationSerializer(serializers.ModelSerializer):
         write_only=True,
         required=False
     )
+    title = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = Conversation
