@@ -38,11 +38,10 @@ class IsParticipantOfConversation(permissions.BasePermission):
     Permission to only allow participants of a conversation to access it.
     Participants can send, view, update, and delete messages in conversations they are part of.
     """
-    
-    
+
     def has_permission(self, request, view):
         """
-        Check if the user is authenticated.
+        Check if the user is authenticated and has permission for this request.
         This is called on every request before checking object permissions.
         
         Args:
@@ -52,7 +51,24 @@ class IsParticipantOfConversation(permissions.BasePermission):
         Returns:
             bool: True if the user is authenticated, False otherwise
         """
-        return request.user and request.user.is_authenticated
+        # First check if the user is authenticated
+        if not (request.user and request.user.is_authenticated):
+            return False
+            
+        # For methods that modify data, we need additional checks
+        if request.method in ["PUT", "PATCH", "DELETE", "POST"]:
+            # For nested routes with conversation_pk
+            if hasattr(view, 'kwargs') and 'conversation_pk' in view.kwargs:
+                from .models import Conversation
+                try:
+                    conversation = Conversation.objects.get(
+                        conversation_id=view.kwargs['conversation_pk']
+                    )
+                    return request.user in conversation.participants.all()
+                except Conversation.DoesNotExist:
+                    return False
+                    
+        return True
     
     def has_object_permission(self, request, view, obj):
         """

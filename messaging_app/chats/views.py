@@ -57,6 +57,13 @@ class ConversationViewSet(viewsets.ModelViewSet):
         Add a participant to an existing conversation.
         """
         conversation = self.get_object()
+        # Check if the requester is a participant in the conversation
+        if request.user not in conversation.participants.all():
+            return Response(
+                {"detail": "Only participants can add users to this conversation."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
         try:
             user_id = request.data.get('user_id')
             user = User.objects.get(user_id=user_id)
@@ -108,7 +115,10 @@ class MessageViewSet(viewsets.ModelViewSet):
         
         # Verify user is a participant
         if not conversation.participants.filter(id=self.request.user.id).exists():
-            raise permissions.PermissionDenied("You are not a participant in this conversation.")
+            return Response(
+                {"detail": "You are not a participant in this conversation."},
+                status=status.HTTP_403_FORBIDDEN
+            )
         
         serializer.save(
             sender=self.request.user,
@@ -167,3 +177,12 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+    def handle_permission_denied(self, request):
+        """
+        Handle permission denied errors with a proper 403 response.
+        """
+        return Response(
+            {"detail": "You do not have permission to perform this action."},
+            status=status.HTTP_403_FORBIDDEN
+        )
