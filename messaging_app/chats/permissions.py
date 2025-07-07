@@ -33,10 +33,26 @@ class IsOwner(permissions.BasePermission):
         return False
 
 
-class IsConversationParticipant(permissions.BasePermission):
+class IsParticipantOfConversation(permissions.BasePermission):
     """
     Permission to only allow participants of a conversation to access it.
+    Participants can send, view, update, and delete messages in conversations they are part of.
     """
+    
+    
+    def has_permission(self, request, view):
+        """
+        Check if the user is authenticated.
+        This is called on every request before checking object permissions.
+        
+        Args:
+            request: Request object
+            view: View object
+            
+        Returns:
+            bool: True if the user is authenticated, False otherwise
+        """
+        return request.user and request.user.is_authenticated
     
     def has_object_permission(self, request, view, obj):
         """
@@ -57,6 +73,17 @@ class IsConversationParticipant(permissions.BasePermission):
         # For Message objects, check if user is a participant in the conversation
         if hasattr(obj, 'conversation'):
             return request.user in obj.conversation.participants.all()
+            
+        # If we're in a viewset with a conversation_pk parameter (nested routes)
+        if hasattr(view, 'kwargs') and 'conversation_pk' in view.kwargs:
+            from .models import Conversation
+            try:
+                conversation = Conversation.objects.get(
+                    conversation_id=view.kwargs['conversation_pk']
+                )
+                return request.user in conversation.participants.all()
+            except Conversation.DoesNotExist:
+                return False
         
         # Default to False
         return False
@@ -92,3 +119,29 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
             return obj.sender == request.user
         
         return False
+
+
+class IsAuthenticatedForAPI(permissions.BasePermission):
+    """
+    Permission to only allow authenticated users to access the API.
+    This can be used globally as a default permission class.
+    """
+    
+    def has_permission(self, request, view):
+        """
+        Check if the user is authenticated.
+        This is called on every request before checking object permissions.
+        
+        Args:
+            request: Request object
+            view: View object
+            
+        Returns:
+            bool: True if the user is authenticated, False otherwise
+        """
+        # Allow registration endpoint without authentication
+        if view.__class__.__name__ == 'RegisterView':
+            return True
+            
+        # Require authentication for all other endpoints
+        return request.user and request.user.is_authenticated

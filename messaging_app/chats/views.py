@@ -12,7 +12,7 @@ from .serializers import (
     MessageSerializer, 
     UserSerializer
 )
-from .permissions import IsConversationParticipant, IsOwner
+from .permissions import IsParticipantOfConversation, IsOwner, IsAuthenticatedForAPI
 
 
 class ConversationViewSet(viewsets.ModelViewSet):
@@ -21,7 +21,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
     Provides CRUD operations and additional actions for conversation management.
     """
     serializer_class = ConversationSerializer
-    permission_classes = [permissions.IsAuthenticated, IsConversationParticipant]
+    permission_classes = [IsAuthenticatedForAPI, IsParticipantOfConversation]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['title', 'participants__username']
     ordering_fields = ['updated_at', 'created_at']
@@ -81,7 +81,7 @@ class MessageViewSet(viewsets.ModelViewSet):
     Provides endpoints for sending, reading, and managing messages.
     """
     serializer_class = MessageSerializer
-    permission_classes = [permissions.IsAuthenticated, IsConversationParticipant]
+    permission_classes = [IsAuthenticatedForAPI, IsParticipantOfConversation]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['message_body', 'sender__username']
     ordering_fields = ['sent_at']
@@ -144,7 +144,7 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
     Read-only access to prevent unauthorized modifications.
     """
     serializer_class = UserSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticatedForAPI]
     queryset = User.objects.all()
     filter_backends = [filters.SearchFilter]
     search_fields = ['username', 'email', 'first_name', 'last_name']
