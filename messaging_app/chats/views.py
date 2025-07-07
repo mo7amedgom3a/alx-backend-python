@@ -13,19 +13,34 @@ from .serializers import (
     UserSerializer
 )
 from .permissions import IsParticipantOfConversation, IsOwner, IsAuthenticatedForAPI
+from .filters import MessageFilter, ConversationFilter
+from .pagination import MessagePagination, ConversationPagination
 
 
 class ConversationViewSet(viewsets.ModelViewSet):
     """
     ViewSet for handling conversations.
     Provides CRUD operations and additional actions for conversation management.
+    
+    Filtering:
+    - participant: Filter by participant username
+    - title: Filter by conversation title
+    - created_after: Filter by creation date
+    - is_group: Filter by group status
+    
+    Pagination:
+    - Default: 10 conversations per page
+    - Max: 50 conversations per page
+    - Query param: ?page_size=X to change page size
     """
     serializer_class = ConversationSerializer
     permission_classes = [IsAuthenticatedForAPI, IsParticipantOfConversation]
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_class = ConversationFilter
     search_fields = ['title', 'participants__username']
     ordering_fields = ['updated_at', 'created_at']
     ordering = ['-updated_at']
+    pagination_class = ConversationPagination
 
     def get_queryset(self):
         """
@@ -86,13 +101,27 @@ class MessageViewSet(viewsets.ModelViewSet):
     """
     ViewSet for handling messages within conversations.
     Provides endpoints for sending, reading, and managing messages.
+    
+    Filtering:
+    - sender: Filter by sender username
+    - content: Filter by message content
+    - sent_after: Filter by messages sent after a date
+    - sent_before: Filter by messages sent before a date
+    - is_read: Filter by read status
+    
+    Pagination:
+    - Default: 20 messages per page
+    - Max: 100 messages per page
+    - Query param: ?page_size=X to change page size
     """
     serializer_class = MessageSerializer
     permission_classes = [IsAuthenticatedForAPI, IsParticipantOfConversation]
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_class = MessageFilter
     search_fields = ['message_body', 'sender__username']
     ordering_fields = ['sent_at']
     ordering = ['-sent_at']
+    pagination_class = MessagePagination
 
     def get_queryset(self):
         """
@@ -152,12 +181,24 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
     """
     ViewSet for viewing user profiles.
     Read-only access to prevent unauthorized modifications.
+    
+    Search fields:
+    - username
+    - email
+    - first_name
+    - last_name
+    
+    Pagination:
+    - Default: 10 users per page
+    - Max: 50 users per page
+    - Query param: ?page_size=X to change page size
     """
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticatedForAPI]
     queryset = User.objects.all()
     filter_backends = [filters.SearchFilter]
     search_fields = ['username', 'email', 'first_name', 'last_name']
+    pagination_class = ConversationPagination
     
     @action(detail=False, methods=['get'])
     def me(self, request):

@@ -175,3 +175,6 @@ SIMPLE_JWT = {
     
     'JTI_CLAIM': 'jti',
 }
+
+# Django Filter settings
+DJANGO_FILTERS_IGNORE_EMPTY = True
