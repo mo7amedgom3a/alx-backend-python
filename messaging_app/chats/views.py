@@ -12,6 +12,7 @@ from .serializers import (
     MessageSerializer, 
     UserSerializer
 )
+from .permissions import IsConversationParticipant, IsOwner
 
 
 class ConversationViewSet(viewsets.ModelViewSet):
@@ -20,7 +21,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
     Provides CRUD operations and additional actions for conversation management.
     """
     serializer_class = ConversationSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsConversationParticipant]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['title', 'participants__username']
     ordering_fields = ['updated_at', 'created_at']
@@ -80,7 +81,7 @@ class MessageViewSet(viewsets.ModelViewSet):
     Provides endpoints for sending, reading, and managing messages.
     """
     serializer_class = MessageSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsConversationParticipant]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['message_body', 'sender__username']
     ordering_fields = ['sent_at']
@@ -135,3 +136,34 @@ class MessageViewSet(viewsets.ModelViewSet):
         messages = self.get_queryset().filter(is_read=False).exclude(sender=request.user)
         messages.update(is_read=True, read_at=timezone.now())
         return Response({'status': 'all messages marked as read'}, status=status.HTTP_200_OK)
+
+
+class UserViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for viewing user profiles.
+    Read-only access to prevent unauthorized modifications.
+    """
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    queryset = User.objects.all()
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['username', 'email', 'first_name', 'last_name']
+    
+    @action(detail=False, methods=['get'])
+    def me(self, request):
+        """
+        Get the current user's profile.
+        """
+        serializer = self.get_serializer(request.user)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['put', 'patch'])
+    def update_profile(self, request):
+        """
+        Update the current user's profile.
+        """
+        user = request.user
+        serializer = self.get_serializer(user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
